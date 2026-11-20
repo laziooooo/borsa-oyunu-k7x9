@@ -197,7 +197,6 @@
   <div id="kontrol">
     <div id="zarSonuc">🎲 —</div>
     <button id="zarBtn">ZAR AT</button>
-    <button id="gecBtn" class="ik" style="display:none">GEÇ</button>
     <button id="krediBtn" class="ik">KREDİ</button>
     <div id="mesaj">Menüden başla.</div>
   </div>
@@ -832,7 +831,7 @@ function kartPopup(ad){
 }
 
 function butonMetin(t){ document.getElementById("zarBtn").textContent=t;
-  if(t==="ZAR AT") document.getElementById("gecBtn").style.display="none"; }
+  }
 function siraGuncelle(){
   const b=document.getElementById("siraGecBtn");
   b.disabled = !(oyun.basladi && oyun.sira===0 && !oyun.anim && !oyun.botSira && !oyun.zorunlu && oyun.turAtildi);
@@ -857,7 +856,6 @@ function insanBekle(m){
 }
 function sirayiGec(){
   bekleyen=null; butonMetin("ZAR AT"); oyun.cift=0; oyun.ciftHak=false;
-  document.getElementById("gecBtn").style.display="none";
   oyun.zorunlu=false; oyun.botSira=false; oyun.turAtildi=false;
   oyun.sira=(oyun.sira+1)%oyun.sirketler.length;
   let gv=0; while(oyun.sirketler[oyun.sira].iflas && gv++<9) oyun.sira=(oyun.sira+1)%oyun.sirketler.length;
@@ -880,16 +878,9 @@ document.getElementById("siraGecBtn").onclick=()=>{
   if(oyun.sira!==0) return;
   if(bekleyen){ urunFiyatiOde(oyun.sirketler[0], bekleyen.ad, canli(bekleyen.ad)); oyun.karar=bekleyen.ad; }
   bekleyen=null; butonMetin("ZAR AT");
-  document.getElementById("gecBtn").style.display="none";
   sirayiGec();
 };
 document.getElementById("krediBtn").onclick=()=>{ if(oyun.sira===0 && !oyun.anim) krediPopup(); else mesaj("Sıra sende değil"); };
-function gecFonk(){ if(!bekleyen) return;
-  urunFiyatiOde(oyun.sirketler[0], bekleyen.ad, canli(bekleyen.ad));
-  oyun.karar=bekleyen.ad; bekleyen=null; butonMetin("ZAR AT");
-  document.getElementById("gecBtn").style.display="none";
-  insanBekle("satın alma geçildi"); cizSirketler(); }
-document.getElementById("gecBtn").onclick=gecFonk;
 
 let bekleyen=null;
 function zarAt(){
@@ -953,7 +944,6 @@ function kareIslem(o,pos){
       if(o.bot) satinAl(ad,o);          // bot aliyor: sadece alim fiyati
       else { bekleyen={ad}; butonMetin("SATIN AL "+c.alim);
         document.getElementById("zarBtn").disabled=false; siraGuncelle();
-        document.getElementById("gecBtn").style.display="inline-block";
         mesaj(`${ad} sahipsiz — satın al (${c.alim}) ya da geç, geçersen ürün fiyatı ödenir`); }
     } else { urunFiyatiOde(o,ad,c); gecis(o,`${ad}: satın alamazsın, ürün ödendi`); }
   } else if(ev.sahip===sIdx){ gecis(o,`${ad} zaten sizin`); }
