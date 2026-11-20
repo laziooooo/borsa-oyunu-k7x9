@@ -292,7 +292,7 @@ const ayar = { isim:["LAZİO","Bot1","Bot2","Bot3","","","",""],
   piyon:[null,null,null,null,null,null,null,null] };
 
 const oyun = { endeks:1.000, feed:[], sira:0, basladi:false, anim:false,
-  botSira:false, zorunlu:false, botGecikme:800, secili:0, kayitlar:[], gorunum:"detay", turAtildi:false,
+  botSira:false, zorunlu:false, botGecikme:800, secili:0, kayitlar:[],  gorunum:"detay", turAtildi:false, karar:null,
   sirketler:[], kartlar:{} };
 DIZILIM.forEach(ad => oyun.kartlar[ad] = { odeme:0, sahip:null, sube:0, zincir:0, fabrika:0 });
 
@@ -312,7 +312,7 @@ function yeniOyunDurumu(){
   });
   oyun.endeks=1.000; oyun.feed=[]; oyun.sira=0; oyun.anim=false;
   oyun.botSira=false; oyun.zorunlu=false; oyun.secili=0; oyun.basladi=true;
-  oyun.cift=0; oyun.ciftHak=false; oyun.turAtildi=false;
+  oyun.cift=0; oyun.ciftHak=false; oyun.turAtildi=false; oyun.karar=null;
   DIZILIM.forEach(ad => oyun.kartlar[ad]={odeme:0,sahip:null,sube:0,zincir:0,fabrika:0});
 }
 
@@ -796,7 +796,7 @@ function hucreTikla(ad){
 function kartPopup(ad){
   const c=canli(ad), ev=oyun.kartlar[ad];
   const uzerinde = oyun.sirketler.some((s,i)=>i===0 && s.pos%10!==0 && DIZILIM[posHucre(s.pos)]===ad);
-  const teklif = ev.sahip==null && uzerinde && oyun.sira===0 && !oyun.anim;
+  const teklif = ev.sahip==null && uzerinde && oyun.sira===0 && !oyun.anim && oyun.karar!==ad;
   const mal=c.mal;
   const satirlar=[["ÜRÜN FİYATI (temel)","",c.kira[0]],
     ["1 ŞUBE",`(${mal}$)`,c.kira[1]],["2 ŞUBE",`(${mal}$)`,c.kira[2]],
@@ -824,7 +824,7 @@ function kartPopup(ad){
       })()}</div>`:""}
       ${teklif?`<div class="dug">
         <button style="background:#7ee08a" onclick="popupKapat();satinAl('${ad}')">SATIN AL ${c.alim}</button>
-        <button style="background:#39404d;color:#eee" onclick="popupKapat();gecFonk()">GEÇ</button></div>`:""}
+        <button style="background:#39404d;color:#eee" onclick="popupKapat()">KAPAT</button></div>`:""}
       <div class="alt">ödeme:${ev.odeme} kez → +%${((Math.pow(1.01,ev.odeme)-1)*100).toFixed(1)}</div>
       <button class="kapat" onclick="popupKapat()">KAPAT</button></div>`;
   document.getElementById("popup").style.width="min(94vw,320px)";
@@ -878,7 +878,7 @@ function botBaslat(){ oyun.botSira=true; document.getElementById("zarBtn").disab
   siraGuncelle(); setTimeout(()=>zarAt(), oyun.botGecikme); }
 document.getElementById("siraGecBtn").onclick=()=>{
   if(oyun.sira!==0) return;
-  if(bekleyen){ urunFiyatiOde(oyun.sirketler[0], bekleyen.ad, canli(bekleyen.ad)); }
+  if(bekleyen){ urunFiyatiOde(oyun.sirketler[0], bekleyen.ad, canli(bekleyen.ad)); oyun.karar=bekleyen.ad; }
   bekleyen=null; butonMetin("ZAR AT");
   document.getElementById("gecBtn").style.display="none";
   sirayiGec();
@@ -886,7 +886,7 @@ document.getElementById("siraGecBtn").onclick=()=>{
 document.getElementById("krediBtn").onclick=()=>{ if(oyun.sira===0 && !oyun.anim) krediPopup(); else mesaj("Sıra sende değil"); };
 function gecFonk(){ if(!bekleyen) return;
   urunFiyatiOde(oyun.sirketler[0], bekleyen.ad, canli(bekleyen.ad));
-  bekleyen=null; butonMetin("ZAR AT");
+  oyun.karar=bekleyen.ad; bekleyen=null; butonMetin("ZAR AT");
   document.getElementById("gecBtn").style.display="none";
   insanBekle("satın alma geçildi"); cizSirketler(); }
 document.getElementById("gecBtn").onclick=gecFonk;
@@ -894,6 +894,7 @@ document.getElementById("gecBtn").onclick=gecFonk;
 let bekleyen=null;
 function zarAt(){
   if(!oyun.basladi||oyun.anim||oyun.zorunlu) return;
+  oyun.karar=null;
   popupKapat();
   const a=1+Math.floor(Math.random()*6), b=1+Math.floor(Math.random()*6);
   document.getElementById("zarSonuc").textContent=`${a}+${b}=${a+b}`;
