@@ -123,7 +123,13 @@
   #kartBilgi { display:none; margin-top:6px; background:#2a2f39; border:1px solid #ffd34d;
     border-radius:6px; padding:7px 9px; font-size:12px; color:#e8e6df; line-height:1.6; }
   #popupKap { position:fixed; inset:0; background:rgba(0,0,0,.72); display:none;
-    align-items:center; justify-content:center; z-index:60; padding:12px; }
+    align-items:center; justify-content:center; z-index:110; padding:12px; }
+#kuralKap { position:fixed; inset:0; background:rgba(8,10,14,.97); z-index:120;
+    display:none; overflow:auto; padding:16px; }
+#kuralKap h3 { color:#ffd34d; text-align:center; margin:6px 0 12px; }
+#kuralKap ol { color:#e8e8ea; font-size:14px; line-height:1.55; padding-left:20px; max-width:640px; margin:0 auto; }
+#kuralKap li { margin-bottom:8px; }
+#kuralKap b { color:#7ee08a; }
   #popup { width:300px; max-width:94vw; background:#faf6ee; color:#222; border:3px solid #000;
     border-radius:8px; overflow:hidden; }
   #popup .bant { padding:9px; font-weight:800; font-size:15px; text-align:center; color:#fff; }
@@ -149,6 +155,7 @@
       <button class="mb" id="mYeni">YENİ OYUN</button>
       <button class="mb ik" id="mYukle">YÜKLE</button>
       <button class="mb ik" id="mAyar">AYARLAR</button>
+      <button class="mb ik" id="mKurallar">OYUN KURALLARI</button>
       <button class="mb ik" id="mTemizle" style="background:#5a2f33;color:#f0c0c0">TEMİZLE</button>
     </div>
   </div>
@@ -210,6 +217,29 @@
   </div>
 </div>
 <div id="popupKap"><div id="popup"></div></div>
+<div id="kuralKap">
+  <h3>OYUN KURALLARI</h3>
+  <ol>
+    <li>Oyun <b>40 kare</b> üzerine saat yönünde oynanır. <b>Zar atmak zorunludur</b>; piyon ilerlemesi bitmeden SIRA GEÇ aktif olmaz.</li>
+    <li>Başlangıç çizgisi geçildiğinde <b>her oyuncuya +200$</b> ödenir.</li>
+    <li><b>Çift zar:</b>2. çiftte tekrar atış hakkı; <b>3. çiftte VERGİ DAİRESİ</b> — oyuncu1 tur oynamaz, sıra geçer.</li>
+    <li>Sahipsiz bir kara piyon gelince <b>ürün ücreti ödenir</b> (satın almasan bile); satın alma isteğe bağlıdır.</li>
+    <li><b>Fiyat sistemi:</b> temel ürün fiyatı X = kart satış fiyatı Y'nin %10'u. Kademeler: <b>1.şube5×,2.şube10×,3.şube15×,4.şube20×, ZİNCİR50×, FABRİKA100×</b> (X tabanlı).</li>
+    <li><b>Yükseltme maliyetleri:</b> şube = kart satış fiyatı (her biri) · <b>zincir =5×</b> · <b>fabrika =10×</b>.</li>
+    <li><b>Fabrika</b> için: sıradaki2 grubun tamamı senin OLMALI ve o sıradaki <b>TÜM kartlar zincire</b> yükseltilmiş olmalı.</li>
+    <li><b>Ödeme +%1:</b> her kira ödemesi şirketin borsa puanını artırır; puan <b>Z çarpanı</b> olarak şirketin TÜM kartlarının satın alma ve kira fiyatlarına yüzde olarak uygulanır.</li>
+    <li><b>ŞANS</b> kartı −50$ · <b>ÖDÜL</b> kartı +100$ (Banka ödemeli).</li>
+    <li><b>Küçük Defter Vergisi:</b> yükseltilmemiş kartların toplam değerinin <b>%20'si</b>. <b>Lüks Vergi:</b> yükseltilmiş kartların şube/zincir/fabrika maliyetlerinin <b>%20'si</b>.</li>
+    <li><b>Borç sırası:</b> para yetmezse İPOTEK (yükseltmeleri yarı fiyata iner, sonra kart bankaya ipoteklenir) → <b>AÇIK ARTIRMA</b> (en zengin oyuncu yarı fiyata alır) → banka yarı fiyata alır → <b>İFLAS</b> (oyun dışı). Her ipotek işlemi şirkete <b>%5 borsa değer kaybı</b> yaptırır.</li>
+    <li><b>KREDİ:</b> kartların toplam satın alma değeri kadar, <b>1-12 taksit</b>; faiz = taksit×%5. Her tur başında taksit ödenir; ödeme yoksa banka kartı alır ve fark kalan taksitlere bölünür; kart yoksa İFLAS.</li>
+    <li><b>PAZARLIK:</b> kart satılabilir — katı zemin: kart fiyatı × grup çarpanı (Gıda/Temizlik×2, Kozmetik/Giyim×4, Ev/Elektronik×6, Araç/Deniz×8).</li>
+    <li><b>Kaydet/Yükle:</b>5 slot, cihazda yerel saklanır; TEMİZLE tüm yerel kayıtları siler (onay sorar).</li>
+    <li>İpotek ya da satışla kart değişince <b>borsa puanı korunur</b> (sıfırlanmaz).</li>
+  </ol>
+  <div style="text-align:center;margin-top:14px">
+    <button class="kapat" style="background:#39404d;color:#eee" onclick="document.getElementById('kuralKap').style.display='none'">KAPAT</button>
+  </div>
+</div>
 
 <script>
 const KATI = (function(){
@@ -447,6 +477,7 @@ function kayitYukle(){
 
 function slotVar(){ for(let i=1;i<=5;i++) if(slotOku(i)) return true; return false; }
 function menuGuncelle(){ document.getElementById("mYukle").disabled = !slotVar(); }
+document.getElementById("mKurallar").onclick=()=>{ document.getElementById("kuralKap").style.display="block"; };
 document.getElementById("mTemizle").onclick=()=>{
   document.getElementById("popup").innerHTML=`
     <div class="bant" style="background:#b03030">TEMİZLE</div>
