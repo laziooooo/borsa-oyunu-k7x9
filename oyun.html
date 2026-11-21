@@ -1662,7 +1662,7 @@ async function kvGet(yol){
         }
       }
     }catch(e){ console.warn("kvGet", e); }
-    await new Promise(w=>setTimeout(w, 900));   // ntfy önbelleği1sn gecikebilir
+    await new Promise(w=>setTimeout(w, 3000));   // hız sınırı/önbellek için sakin tekrar
   }
   return null; }
 async function kvPut(yol, veri){ try{
@@ -1742,7 +1742,7 @@ async function arkadasCiz(){
     else if(window.__sonGor[ad] && (simdi - window.__sonGor[ad].zaman) < 120000){
       on = { ts: window.__sonGor[ad].ts };                            // okuma hatası → son bilineni koru (yanıp sönmesin)
     }
-    const ye = on && (simdi - on.ts) < 55000;
+    const ye = on && (simdi - on.ts) < 70000;
     if(on && on.ts > enTaze) enTaze = on.ts;
     const yas = on ? (Math.round((simdi - on.ts)/1000) + "sn önce") : "kayıt yok";
     html += `<div class="dsat"><span class="dnokta" style="background:${ye?"#7ee08a":"#5a5e68"}"></span><b>${ad}</b>`+
@@ -1793,7 +1793,7 @@ function heartKur(){
   clearInterval(window.__sosyalT); window.__sosyalT = setInterval(()=>{
     davetKontrol();
     const a = document.getElementById("arkadasKutu");
-    if(a && a.style.display === "block") arkadasCiz(); }, 12000); }
+    if(a && a.style.display === "block") arkadasCiz(); }, 30000); }
 setTimeout(()=>{
   const sat = document.getElementById("surumSatir"); if(sat) sat.textContent = SURUM;
   const k = localStorage.getItem("borsaNick");
@@ -1803,8 +1803,7 @@ setTimeout(()=>{
     const s = document.createElement("script");
     s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
     s.onload = ()=>gsiKur(); document.head.appendChild(s);
-  } else gsiKur();
-  setInterval(davetKontrol, 10000); }, 600);
+  } else gsiKur(); }, 600);
 </script>
 </body>
 </html>
