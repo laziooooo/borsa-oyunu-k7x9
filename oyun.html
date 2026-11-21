@@ -1470,7 +1470,11 @@ setInterval(()=>{
       if(document.getElementById("durumKart").style.display==="block") odaYaz("durumNot",not);
     }
     const tH=document.getElementById("teshisH"), tG=document.getElementById("teshisG");
-    const sat=`${SURUM} · eşleşme:${peer} · gönderilen:${ODA.nGonder} · alınan:${ODA.nAlinan}`;
+    let rel="-";
+    try{ if(TR && TR.getRelaySockets){ const rs=TR.getRelaySockets(); let a=0,t=0;
+      for(const u of Object.keys(rs)){ t++; if(rs[u] && rs[u].readyState===1) a++; }
+      rel = a+"/"+t; } }catch(e){}
+    const sat=`${SURUM} · relay:${rel} · eşleşme:${peer} · gönderilen:${ODA.nGonder} · alınan:${ODA.nAlinan}`;
     if(tH && ODA.rol==="kurucu") tH.textContent=sat;
     if(tG && ODA.rol==="misafir") tG.textContent=sat;
     if(ODA.rol==="misafir"){
