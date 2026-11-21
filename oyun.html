@@ -290,6 +290,7 @@
         <span class="dnokta" style="display:inline-block;background:#7ee08a;vertical-align:middle"></span>
         <a href="#" id="cikisBtn" style="color:#ff8a7a;font-size:12px;float:right">cikis</a></div>
       <div id="arkadasListe"></div>
+      <div class="odaNot" id="teshisS" style="color:#6eb4ff;font-family:Consolas;text-align:left"></div>
       <div style="display:flex;gap:6px;margin-top:8px">
         <input id="arkadasEkle" placeholder="takma ad" style="flex:1" autocomplete="off">
         <button class="odaBtn sari" id="arkadasBtn" style="width:auto;padding:9px 12px;margin:0">EKLE</button>
@@ -1646,7 +1647,7 @@ function kvSlug(yol){ return (KV+"-"+yol.replace(/[^a-zA-Z0-9_-]/g,"-")).toLower
 async function kvGet(yol){
   for(let deneme=0; deneme<2; deneme++){
     try{
-      const r = await fetch("https://ntfy.sh/"+kvSlug(yol)+"/json?poll=1");
+      const r = await fetch("https://ntfy.sh/"+kvSlug(yol)+"/json?poll=1&t="+Date.now());
       if(r.ok){
         const txt = await r.text();
         if(txt){
@@ -1732,14 +1733,23 @@ async function arkadasCiz(){
   if(!l || !BEN_SOC) return;
   if(!BEN_SOC.arkadas.length){ l.innerHTML = '<div class="odaNot">henüz arkadaş yok — takma adıyla ekle</div>'; return; }
   const simdi = Date.now(); let html = "";
+  let enTaze = 0;
   for(const ad of BEN_SOC.arkadas){
     const on = await kvGet("presence/"+ad);
     const ye = on && (simdi - on.ts) < 55000;
+    if(on && on.ts > enTaze) enTaze = on.ts;
+    const yas = on ? (Math.round((simdi - on.ts)/1000) + "sn önce") : "kayıt yok";
     html += `<div class="dsat"><span class="dnokta" style="background:${ye?"#7ee08a":"#5a5e68"}"></span><b>${ad}</b>`+
-      `<span style="margin-left:auto;font-size:12px;color:${ye?"#7ee08a":"#9698a0"}">${ye?"çevrimiçi":"kapalı"}</span>`+
+      `<span style="margin-left:auto;font-size:12px;color:${ye?"#7ee08a":"#9698a0"}">${ye?"çevrimiçi":("kapalı · "+yas)}</span>`+
       (ye ? `<button class="odaBtn sari" style="width:auto;padding:4px 10px;margin:0;font-size:13px" onclick="davetGonder('${ad}')">DAVET</button>` : "")+
       `<button style="background:none;border:none;color:#ff8a7a;font-size:15px" onclick="arkadasSil('${ad}')">&times;</button></div>`; }
-  l.innerHTML = html; }
+  l.innerHTML = html;
+  const t=document.getElementById("teshisS");
+  if(t){ let kalp="-";
+    try{ const k=parseInt(localStorage.getItem("borsaKalp")||"0",10);
+      if(k) kalp=Math.max(0,Math.round((Date.now()-k)/1000))+"sn"; }catch(e){}
+    t.textContent = `kv:${ODA.kvOk||0}/${ODA.kvHata||0} · kalp:${kalp}`+
+      (enTaze ? (" · en taze görünüm:"+Math.max(0,Math.round((simdi-enTaze)/1000))+"sn") : " · hiç kayıt gelmedi"); } }
 window.davetGonder = async function(ad){
   if(!ODA.odaKodStr){ mesaj("önce oda kur"); return; }
   const ok = await kvPut("davet/"+ad, { kimden:BEN_SOC.nick, oda:ODA.odaKodStr, tarih:Date.now() });
