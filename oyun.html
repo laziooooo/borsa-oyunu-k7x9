@@ -2,6 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Borsa Oyunu — v2</title>
 <style>
@@ -296,6 +298,7 @@
       <button class="odaBtn sari" id="davetBtn" style="padding:9px">DAVET ET</button>
       <div class="odaHata" id="davetHata"></div>
     </div>
+    <button class="odaBtn yesil" id="baslaBtn" style="display:none">OYUNA BAŞLA</button>
     <div class="odaNot" id="durumNot"></div>
   </div>
   <button class="odaBtn gri" id="odaGeri">GERİ</button>
@@ -1271,7 +1274,14 @@ async function trysteroGet(){ if(TR) return TR;
 async function baglan(){
   const T = await trysteroGet();
   ODA.odaKodStr = ODA.odaId+"-"+ODA.sifre;
-  room = T.joinRoom({ appId:"borsa-oyunu-k7x9", password:ODA.sifre, maxUsers:8 }, ODA.odaId);
+  room = T.joinRoom({ appId:"borsa-oyunu-k7x9", password:ODA.sifre, maxUsers:8,
+    iceServers:[
+      {urls:"stun:stun.l.google.com:19302"},
+      {urls:"stun:stun1.l.google.com:19302"},
+      {urls:"turn:openrelay.metered.ca:80", username:"openrelay", credential:"openrelay"},
+      {urls:"turn:openrelay.metered.ca:443", username:"openrelay", credential:"openrelay"},
+      {urls:"turn:openrelay.metered.ca:443?transport=tcp", username:"openrelay", credential:"openrelay"}
+    ] }, ODA.odaId);
   const t = room.makeAction("m");
   A_GONDER = (t && typeof t.send==="function") ? ((d)=>t.send(d)) : ((d)=>t[0](d));
   if(t && typeof t==="object" && !Array.isArray(t)){
@@ -1291,6 +1301,8 @@ function odaAc(){
   menuGuncelle();
   const db=document.getElementById("davetBloK");
   if(db) db.style.display = (ODA.rol==="kurucu") ? "block" : "none";
+  const bb=document.getElementById("baslaBtn");
+  if(bb) bb.style.display = (ODA.rol==="kurucu" && ODA.hazir) ? "block" : "none";
   if(ODA.rol) durumCiz(); }
 function odaKapat(){ document.getElementById("odaKap").style.display="none"; }
 function bekleAc(){ document.getElementById("odaBekle").style.display="block";
@@ -1336,6 +1348,11 @@ function kapiKontrol(){
     odaYaz("durumNot","oda hazır — davet bekleniyor (en az1 arkadaş kodu ekle)"); return; }
   if(ODA.kodlar.some(k=>!ODA.katilan[k])) { durumCiz(); return; }
   ODA.hazir = true;
+  durumCiz();
+  odaYaz("durumNot","herkes katıldı — OYUNA BAŞLA'ya bas");
+  const b=document.getElementById("baslaBtn"); if(b) b.style.display="block"; }
+function odaBasla(){
+  if(!ODA.hazir || ODA.rol!=="kurucu") return;
   if(ODA.mod==="yeni") odaOyunBaslat();
   else { oyun.basladi=true; menuKapat(); kur(); siraGuncelle();
     const o=oyun.sirketler[oyun.sira];
@@ -1394,6 +1411,27 @@ function yayinla(){
     sonZar:(document.getElementById("zarSonuc")||{}).textContent||"" }); }
   catch(e){ console.warn("yayin", e); } }
 setInterval(()=>{ if(ODA.rol==="kurucu" && room) yayinla(); }, 1500);
+setInterval(()=>{
+  try{
+    if(!room || !ODA.rol) return;
+    const peer = Object.keys(room.getPeers()).length;
+    if(ODA.rol==="kurucu" && !ODA.hazir){
+      const eksik=ODA.kodlar.filter(k=>!ODA.katilan[k]);
+      let not;
+      if(ODA.kodlar.length<1) not="oda hazır — davet bekleniyor (en az1 arkadaş kodu ekle)";
+      else if(eksik.length && peer<1) not="bağlantı kuruluyor… (ev sahibi çevrimiçi, arkadaş bekleniyor)";
+      else if(eksik.length) not="bekleniyor: "+eksik.join(", ");
+      if(document.getElementById("durumKart").style.display==="block") odaYaz("durumNot",not);
+    }
+    if(ODA.rol==="misafir"){
+      const b=document.getElementById("bekleBas");
+      if(b && document.getElementById("odaBekle").style.display==="block"){
+        b.textContent = peer<1 ? "Ev sahibine bağlanılıyor…"
+          : (ODA.seat>0 ? "Ev sahibi başlatması bekleniyor ("+ODA.seat+". koltukta)"
+                        : "Odaya katıldın — ev sahibi onaylıyor…"); }
+    }
+  }catch(e){}
+}, 1000);
 const TURLU = ["zar","satinAl","gec","yuksealt","ipotek","pazarlikOnay","kredi","bosGec"];
 function yonet(is, args){
   if(!ODA.rol) return true;
@@ -1493,6 +1531,7 @@ document.getElementById("mCik").onclick = ()=>{ location.reload(); };
 document.getElementById("bekleCik").onclick = ()=>{ location.reload(); };
 document.getElementById("kurBtn").onclick = odaKur;
 document.getElementById("davetBtn").onclick = davetEkle;
+document.getElementById("baslaBtn").onclick = odaBasla;
 document.getElementById("katilBtn").onclick = odayaKatil;
 document.getElementById("odaGeri").onclick = ()=>{
   clearInterval(odaZaman);
