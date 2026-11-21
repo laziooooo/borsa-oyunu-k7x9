@@ -1261,6 +1261,10 @@ function odaPar(deger){ deger=(deger||"").toUpperCase();
   const t=deger.replace(/[^A-Z0-9]/g,"");
   if(t.length===12) return [t.slice(0,6), t.slice(6)];
   return null; }
+function kendiOda(){ let o=null; try{ o=JSON.parse(localStorage.getItem("borsaOda")); }catch(e){}
+  if(!o || !o.id || !o.sifre){ o={ id:rastKod(6), sifre:rastKod(6) };
+    try{ localStorage.setItem("borsaOda", JSON.stringify(o)); }catch(e){} }
+  return o; }
 function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catch(e){}
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
@@ -1486,7 +1490,8 @@ async function odaKur(){
     ODA.rol="kurucu"; ODA.seat=0; ODA.mod="yeni";
     ODA.kodlar=[...new Set(ilk)].filter(k=>k!==BEN_KOD).slice(0,7);
     ODA.katilan={}; ODA.koltuk={}; ODA.hazir=false;
-    ODA.odaId=rastKod(6); ODA.sifre=rastKod(6);
+    const ko = kendiOda();                    // oda kodu cihaza özel ve sabit (oyuncu kodu gibi)
+    ODA.odaId=ko.id; ODA.sifre=ko.sifre;
     await baglan();
     odaAc();
     document.getElementById("odaKodBanner").style.display="block";
