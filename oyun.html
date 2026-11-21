@@ -1711,12 +1711,13 @@ document.getElementById("nickOnay").onclick = async ()=>{
 document.getElementById("cikisBtn").onclick = (e)=>{ e.preventDefault();
   BEN_SOC = null; localStorage.removeItem("borsaNick"); sosyalAc(); };
 document.getElementById("arkadasBtn").onclick = async ()=>{
-  const ad = (document.getElementById("arkadasEkle").value||"").trim().toLowerCase();
+  const ad = (document.getElementById("arkadasEkle").value||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
   const h = document.getElementById("arkadasHata");
   if(!BEN_SOC){ h.textContent = "önce giriş yap"; return; }
+  if(!ad){ h.textContent = "takma ad yaz"; return; }
   if(ad === BEN_SOC.nick){ h.textContent = "kendini ekleyemezsin"; return; }
   const karsi = await kvGet("nick/"+ad);
-  if(!karsi){ h.textContent = "bu takma ad yok"; return; }
+  if(!karsi){ h.textContent = "bu takma ad yok — küçük harf/rakam yaz (tire yok): "+ad; return; }
   if(BEN_SOC.arkadas.includes(ad)){ h.textContent = "zaten arkadaş"; return; }
   BEN_SOC.arkadas.push(ad);
   await kvPut("nick/"+BEN_SOC.nick, BEN_SOC);
