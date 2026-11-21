@@ -1734,8 +1734,13 @@ async function arkadasCiz(){
   if(!BEN_SOC.arkadas.length){ l.innerHTML = '<div class="odaNot">henüz arkadaş yok — takma adıyla ekle</div>'; return; }
   const simdi = Date.now(); let html = "";
   let enTaze = 0;
+  window.__sonGor = window.__sonGor || {};
   for(const ad of BEN_SOC.arkadas){
-    const on = await kvGet("presence/"+ad);
+    let on = await kvGet("presence/"+ad);
+    if(on){ window.__sonGor[ad] = { ts:on.ts, zaman:simdi }; }        // başarılı okuma → hatırla
+    else if(window.__sonGor[ad] && (simdi - window.__sonGor[ad].zaman) < 120000){
+      on = { ts: window.__sonGor[ad].ts };                            // okuma hatası → son bilineni koru (yanıp sönmesin)
+    }
     const ye = on && (simdi - on.ts) < 55000;
     if(on && on.ts > enTaze) enTaze = on.ts;
     const yas = on ? (Math.round((simdi - on.ts)/1000) + "sn önce") : "kayıt yok";
