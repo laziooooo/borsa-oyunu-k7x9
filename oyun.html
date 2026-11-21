@@ -1474,7 +1474,10 @@ setInterval(()=>{
     try{ if(TR && TR.getRelaySockets){ const rs=TR.getRelaySockets(); let a=0,t=0;
       for(const u of Object.keys(rs)){ t++; if(rs[u] && rs[u].readyState===1) a++; }
       rel = a+"/"+t; } }catch(e){}
-    const sat=`${SURUM} · relay:${rel} · eşleşme:${peer} · gönderilen:${ODA.nGonder} · alınan:${ODA.nAlinan}`;
+    let kalp="-";
+    try{ const k=parseInt(localStorage.getItem("borsaKalp")||"0",10);
+      if(k) kalp = Math.max(0, Math.round((Date.now()-k)/1000))+"sn"; }catch(e){}
+    const sat=`${SURUM} · relay:${rel} · eşleşme:${peer} · gönderilen:${ODA.nGonder} · alınan:${ODA.nAlinan} · kv:${ODA.kvOk||0}/${ODA.kvHata||0} · kalp:${kalp}`;
     if(tH && ODA.rol==="kurucu") tH.textContent=sat;
     if(tG && ODA.rol==="misafir") tG.textContent=sat;
     if(ODA.rol==="misafir"){
@@ -1663,7 +1666,8 @@ async function kvGet(yol){
   return null; }
 async function kvPut(yol, veri){ try{
   const r = await fetch("https://ntfy.sh/"+kvSlug(yol), { method:"POST", body:JSON.stringify(veri) });
-  return r.ok; } catch(e){ console.warn("kvPut", e); return false; } }
+  if(r.ok){ ODA.kvOk = (ODA.kvOk||0)+1; } else { ODA.kvHata = (ODA.kvHata||0)+1; }
+  return r.ok; } catch(e){ ODA.kvHata = (ODA.kvHata||0)+1; console.warn("kvPut", e); return false; } }
 function sosyalYaz(id, t){ const e = document.getElementById(id); if(e) e.textContent = t; }
 function jwtCoz(jwt){ try{ const p = jwt.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
   return JSON.parse(atob(p)); }catch(e){ return null; } }
@@ -1766,7 +1770,8 @@ document.getElementById("davetRed").onclick = async ()=>{
   if(BEN_SOC) await davetIptal((window.__davet && window.__davet.tarih) || Date.now()); };
 function heartKur(){
   if(!BEN_SOC) return;
-  const at = async ()=>{ await kvPut("presence/"+BEN_SOC.nick, { ts:Date.now() }); };
+  const at = async ()=>{ const ok = await kvPut("presence/"+BEN_SOC.nick, { ts:Date.now() });
+    if(ok){ try{ localStorage.setItem("borsaKalp", String(Date.now())); }catch(e){} } };
   at();
   clearInterval(window.__heart); window.__heart = setInterval(at, 20000);
   clearInterval(window.__sosyalT); window.__sosyalT = setInterval(()=>{
