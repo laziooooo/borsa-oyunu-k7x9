@@ -1636,7 +1636,9 @@ if(URLP.get("oda")){
 // ===== SOSYAL: Google giriş + takma ad + arkadaş + yeşil nokta + davet =====
 const KV = "borsaoyunu7xk2";
 const GIS_ID = "911017529513-p3913d6kk5vsuj89nkghnoegvlv8fnuv.apps.googleusercontent.com";
-let BEN_SOC = null, gsiKuruldu = false, sonDavet = 0;
+let BEN_SOC = null, gsiKuruldu = false;
+let sonDavet = (function(){ try{ return parseInt(localStorage.getItem("borsaSonDavet")||"0",10)||0; }catch(e){ return 0; } })();
+function davetIsle(t){ if(t>sonDavet){ sonDavet=t; try{ localStorage.setItem("borsaSonDavet", String(t)); }catch(e){} } }
 function kvSlug(yol){ return (KV+"-"+yol.replace(/[^a-zA-Z0-9_-]/g,"-")).toLowerCase(); }
 async function kvGet(yol){
   for(let deneme=0; deneme<2; deneme++){
@@ -1738,23 +1740,27 @@ window.davetGonder = async function(ad){
 async function davetKontrol(){
   if(!BEN_SOC) return;
   const d = await kvGet("davet/"+BEN_SOC.nick);
-  if(d && d.tarih > sonDavet){
-    sonDavet = d.tarih; window.__davet = d;
+  if(d && !d.iptal && d.tarih > sonDavet){
+    davetIsle(d.tarih);                 // gösterirken işaretle: reload'da tekrar GÖSTERİLMEZ
+    window.__davet = d;
     document.getElementById("davetMetin").innerHTML =
       `<b>${d.kimden}</b> seni odasına davet ediyor:<br><code style="color:#7ee08a">${d.oda}</code>`;
     document.getElementById("davetKap").style.display = "flex"; } }
+async function davetIptal(t){ for(let i=0;i<2;i++){
+  if(await kvPut("davet/"+BEN_SOC.nick, { iptal:true, tarih:t||Date.now() })) return;
+  await new Promise(w=>setTimeout(w,1500)); } }
 document.getElementById("davetKabul").onclick = async ()=>{
   const d = window.__davet;
   document.getElementById("davetKap").style.display = "none";
   if(!d || !BEN_SOC) return;
-  await kvPut("davet/"+BEN_SOC.nick, null);
+  await davetIptal(d.tarih);
   if(ODA.rol){ mesaj("önce mevcut odadan çık (ODADAN ÇIK)"); return; }
   document.getElementById("katilOda").value = d.oda;
   document.getElementById("katilAd").value = BEN_SOC.nick;
   odayaKatil(); };
 document.getElementById("davetRed").onclick = async ()=>{
   document.getElementById("davetKap").style.display = "none";
-  if(BEN_SOC) await kvPut("davet/"+BEN_SOC.nick, null); };
+  if(BEN_SOC) await davetIptal((window.__davet && window.__davet.tarih) || Date.now()); };
 function heartKur(){
   if(!BEN_SOC) return;
   const at = async ()=>{ await kvPut("presence/"+BEN_SOC.nick, { ts:Date.now() }); };
