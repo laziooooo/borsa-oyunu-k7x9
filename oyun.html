@@ -1306,7 +1306,7 @@ function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catc
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
 const BEN_KOD = kodNorm(URLP.get("kod")||"") || kendiKodu();
-const SURUM = "v2026-11-20c";
+const SURUM = "v2026-11-21a";
 ODA.nGonder=0; ODA.nAlinan=0;
 let room=null, A_GONDER=null, TR=null, odaZaman=null;
 function odaYaz(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; }
@@ -1716,6 +1716,7 @@ document.getElementById("arkadasBtn").onclick = async ()=>{
   if(!BEN_SOC){ h.textContent = "önce giriş yap"; return; }
   if(!ad){ h.textContent = "takma ad yaz"; return; }
   if(ad === BEN_SOC.nick){ h.textContent = "kendini ekleyemezsin"; return; }
+  h.textContent = "aranıyor…";
   const karsi = await kvGet("nick/"+ad);
   if(!karsi){ h.textContent = "bu takma ad yok — küçük harf/rakam yaz (tire yok): "+ad; return; }
   if(BEN_SOC.arkadas.includes(ad)){ h.textContent = "zaten arkadaş"; return; }
@@ -1797,7 +1798,10 @@ function heartKur(){
 setTimeout(()=>{
   const sat = document.getElementById("surumSatir"); if(sat) sat.textContent = SURUM;
   const k = localStorage.getItem("borsaNick");
-  if(k){ try{ BEN_SOC = JSON.parse(k); heartKur(); }catch(e){ BEN_SOC = null; } }
+  if(k){ try{ BEN_SOC = JSON.parse(k); heartKur();
+    kvPut("nick/"+BEN_SOC.nick, BEN_SOC);                    // kaydı hemen tazele
+    setInterval(()=>{ if(BEN_SOC) kvPut("nick/"+BEN_SOC.nick, BEN_SOC); }, 600000);
+  }catch(e){ BEN_SOC = null; } }
   sosyalAc();
   if(!window.google){
     const s = document.createElement("script");
