@@ -273,8 +273,8 @@
     <div class="odaBas">ODA KUR</div>
     <div class="odaEt">Davet edileceklerin kodları:</div>
     <textarea id="davetKodlar" rows="3" placeholder="AB12-CD34, EF56-GH78, ..."></textarea>
-    <div class="odaMavi">en az2, en fazla8 kişi (sen dâhil)</div>
-    <button class="odaBtn sari" id="kurBtn">ODA KUR ve DAVET ET</button>
+    <div class="odaMavi">oda hemen açılır · davetleri sonra da ekleyebilirsin (toplam en fazla8 kişi)</div>
+    <button class="odaBtn sari" id="kurBtn">ODA KUR</button>
     <div class="odaHata" id="kurHata"></div>
   </div>
   <div class="odaKart" id="katilKart">
@@ -290,6 +290,12 @@
     <div class="odaBas" id="durumBas">ODA DURUMU</div>
     <div class="odaKodBanner" id="odaKodBanner"></div>
     <div id="durumListe"></div>
+    <div id="davetBloK" style="display:none">
+      <div class="odaEt" style="margin-top:8px">Arkadaş kodlarını davet et:</div>
+      <textarea id="davetKodlar2" rows="2" placeholder="AB12-CD34, EF56-GH78, ..."></textarea>
+      <button class="odaBtn sari" id="davetBtn" style="padding:9px">DAVET ET</button>
+      <div class="odaHata" id="davetHata"></div>
+    </div>
     <div class="odaNot" id="durumNot"></div>
   </div>
   <button class="odaBtn gri" id="odaGeri">GERİ</button>
@@ -1283,6 +1289,8 @@ function odaAc(){
   document.getElementById("katilKart").style.display = ODA.rol ? "none" : "block";
   document.getElementById("durumKart").style.display = ODA.rol ? "block" : "none";
   menuGuncelle();
+  const db=document.getElementById("davetBloK");
+  if(db) db.style.display = (ODA.rol==="kurucu") ? "block" : "none";
   if(ODA.rol) durumCiz(); }
 function odaKapat(){ document.getElementById("odaKap").style.display="none"; }
 function bekleAc(){ document.getElementById("odaBekle").style.display="block";
@@ -1324,6 +1332,8 @@ function mesajAl(d){
   if(d.tip==="hamle" && ODA.rol==="kurucu"){ hamleCalistir(d); return; } }
 function kapiKontrol(){
   if(ODA.hazir || ODA.rol!=="kurucu") return;
+  if(ODA.kodlar.length<1){ durumCiz();
+    odaYaz("durumNot","oda hazır — davet bekleniyor (en az1 arkadaş kodu ekle)"); return; }
   if(ODA.kodlar.some(k=>!ODA.katilan[k])) { durumCiz(); return; }
   ODA.hazir = true;
   if(ODA.mod==="yeni") odaOyunBaslat();
@@ -1430,16 +1440,14 @@ function odaDevam(v){
     yayinla(); })
   .catch(e=>{ mesaj("Oda kurulamadi: "+e.message); }); }
 async function odaKur(){
-  const davet = (document.getElementById("davetKodlar").value||"").split(/[^A-Za-z0-9]+/)
-    .map(kodNorm).filter(kodGecerli);
-  const benzersiz = [...new Set(davet)].filter(k=>k!==BEN_KOD);
   const hata = document.getElementById("kurHata");
-  if(benzersiz.length<1){ hata.textContent="en az1 davet kodu gerek (toplam en az2 kisi)"; return; }
-  if(benzersiz.length>7){ hata.textContent="en fazla8 kisi (sen dahil) —7 davet kodu"; return; }
   hata.textContent="baglaniyor…";
   try{
+    const ilk = (document.getElementById("davetKodlar").value||"").split(/[^A-Za-z0-9]+/)
+      .map(kodNorm).filter(kodGecerli);
     ODA.rol="kurucu"; ODA.seat=0; ODA.mod="yeni";
-    ODA.kodlar=benzersiz; ODA.katilan={}; ODA.koltuk={}; ODA.hazir=false;
+    ODA.kodlar=[...new Set(ilk)].filter(k=>k!==BEN_KOD).slice(0,7);
+    ODA.katilan={}; ODA.koltuk={}; ODA.hazir=false;
     ODA.odaId=rastKod(6); ODA.sifre=rastKod(6);
     await baglan();
     odaAc();
@@ -1447,7 +1455,18 @@ async function odaKur(){
     document.getElementById("odaKodBanner").textContent="ODA KODU: "+ODA.odaKodStr;
     hata.textContent="";
     yayinla();
+    kapiKontrol();
   }catch(e){ hata.textContent="baglanti kurulamadi: "+e.message; ODA.rol=null; } }
+function davetEkle(){
+  const hata=document.getElementById("davetHata");
+  const yeni=(document.getElementById("davetKodlar2").value||"").split(/[^A-Za-z0-9]+/)
+    .map(kodNorm).filter(kodGecerli).filter(k=>k!==BEN_KOD && !ODA.kodlar.includes(k));
+  if(!yeni.length){ hata.textContent="geçerli yeni kod yok"; return; }
+  if(ODA.kodlar.length + yeni.length > 7){ hata.textContent="en fazla8 kişi (sen dâhil)"; return; }
+  ODA.kodlar = ODA.kodlar.concat(yeni);
+  document.getElementById("davetKodlar2").value="";
+  hata.textContent="davet eklendi ("+ODA.kodlar.length+" kişi bekleniyor)";
+  durumCiz(); kapiKontrol(); yayinla(); }
 async function odayaKatil(){
   const p = odaPar(document.getElementById("katilOda").value);
   const ad = (document.getElementById("katilAd").value||"").trim() || "Misafir";
@@ -1473,6 +1492,7 @@ document.getElementById("mOda").onclick = ()=>{ odaAc(); };
 document.getElementById("mCik").onclick = ()=>{ location.reload(); };
 document.getElementById("bekleCik").onclick = ()=>{ location.reload(); };
 document.getElementById("kurBtn").onclick = odaKur;
+document.getElementById("davetBtn").onclick = davetEkle;
 document.getElementById("katilBtn").onclick = odayaKatil;
 document.getElementById("odaGeri").onclick = ()=>{
   clearInterval(odaZaman);
