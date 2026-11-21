@@ -1648,10 +1648,13 @@ async function kvGet(yol){
         const txt = await r.text();
         if(txt){
           const satirlar = txt.trim().split("\n").filter(Boolean);
-          for(let i=satirlar.length-1; i>=0; i--){ try{
-            const o = JSON.parse(satirlar[i]);
-            if(o.event==="message" && o.message!=null) return JSON.parse(o.message);
-          }catch(e){} }
+          let enYeni = null, enYeniT = -1;
+          for(const l of satirlar){ try{
+            const o = JSON.parse(l);
+            if(o.event==="message" && o.message!=null && o.time > enYeniT){
+              enYeniT = o.time; enYeni = o.message;
+            } }catch(e){} }
+          if(enYeni !== null) return JSON.parse(enYeni);
         }
       }
     }catch(e){ console.warn("kvGet", e); }
