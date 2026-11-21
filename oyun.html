@@ -300,6 +300,7 @@
     </div>
     <button class="odaBtn yesil" id="baslaBtn" style="display:none">OYUNA BAŞLA</button>
     <div class="odaNot" id="durumNot"></div>
+    <div class="odaNot" id="teshisH" style="color:#6eb4ff;font-family:Consolas"></div>
   </div>
   <button class="odaBtn gri" id="odaGeri">GERİ</button>
 </div>
@@ -308,6 +309,7 @@
   <div class="odaEt">Senin kodun:</div>
   <div class="bkKod" id="bekleKodum">—</div>
   <div class="bkListe" id="bekleListe"></div>
+  <div class="odaNot" id="teshisG" style="color:#6eb4ff;font-family:Consolas"></div>
   <button class="odaBtn gri" id="bekleCik" style="max-width:300px;margin:10px auto">ODADAN ÇIK</button>
 </div>
 
@@ -1269,6 +1271,8 @@ function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catc
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
 const BEN_KOD = kodNorm(URLP.get("kod")||"") || kendiKodu();
+const SURUM = "v2026-11-20b";
+ODA.nGonder=0; ODA.nAlinan=0;
 let room=null, A_GONDER=null, TR=null, odaZaman=null;
 function odaYaz(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; }
 async function trysteroGet(){ if(TR) return TR;
@@ -1287,7 +1291,9 @@ async function baglan(){
       {urls:"turn:openrelay.metered.ca:443?transport=tcp", username:"openrelay", credential:"openrelay"}
     ] }, ODA.odaId);
   const t = room.makeAction("m");
-  A_GONDER = (t && typeof t.send==="function") ? ((d)=>t.send(d)) : ((d)=>t[0](d));
+  A_GONDER = (t && typeof t.send==="function")
+    ? ((d)=>{ ODA.nGonder++; return t.send(d); })
+    : ((d)=>{ ODA.nGonder++; return t[0](d); });
   if(t && typeof t==="object" && !Array.isArray(t)){
     t.onMessage(d => mesajAl(d));             // yeni API: metot çağrısı (unsubscribe döner)
   } else if(t && typeof t[1]==="function"){
@@ -1335,6 +1341,7 @@ function bekleCiz(){
   odaYaz("bekleBas", `Odaya katıldın — ${dolu}/${toplam} kişi · ev sahibi başlatması bekleniyor`); }
 function mesajAl(d){
   if(!d) return;
+  ODA.nAlinan++;
   try{ localStorage.setItem(ODA.rol==="kurucu"?"odaAliciH":"odaAliciG", Date.now()+" "+d.tip); }catch(e){}
   if(d.tip==="kimlik"){
     if(ODA.rol!=="kurucu") return;
@@ -1383,7 +1390,8 @@ function misafirUygula(d){
     ODA.kodlar = d.oda.kodlar || ODA.kodlar;
     ODA.katilan = d.oda.katilan || ODA.katilan;
     const s = d.oda.koltuk ? d.oda.koltuk[BEN_KOD] : null;
-    if(s!=null){ ODA.seat = s; clearInterval(odaZaman); }  // kimlik yanıtlanana kadarki tekrar YENİ DURUMDA SÖNMEZ
+    if(s!=null){ ODA.seat = s; clearInterval(odaZaman); }
+    else if(typeof window.__kimlik==="function"){ try{ window.__kimlik(); }catch(e){} }  // koltuk yoksa anında tekrar gönder
     if(!d.oda.basladi){ bekleCiz(); bekleAc(); }
     else { bekleKapat(); menuKapat(); } }
   if(!d.veri) return;
@@ -1427,6 +1435,10 @@ setInterval(()=>{
       else if(eksik.length) not="bekleniyor: "+eksik.join(", ");
       if(document.getElementById("durumKart").style.display==="block") odaYaz("durumNot",not);
     }
+    const tH=document.getElementById("teshisH"), tG=document.getElementById("teshisG");
+    const sat=`${SURUM} · eşleşme:${peer} · gönderilen:${ODA.nGonder} · alınan:${ODA.nAlinan}`;
+    if(tH && ODA.rol==="kurucu") tH.textContent=sat;
+    if(tG && ODA.rol==="misafir") tG.textContent=sat;
     if(ODA.rol==="misafir"){
       const b=document.getElementById("bekleBas");
       if(b && document.getElementById("odaBekle").style.display==="block"){
@@ -1524,9 +1536,10 @@ async function odayaKatil(){
         localStorage.setItem("odaGonder", Date.now()+" gonderildi");
         if(pr && pr.catch) pr.catch(e=>localStorage.setItem("odaGonder","RED:"+e.message));
       }catch(e){ localStorage.setItem("odaGonder","HATA:"+e.message); } };
+    window.__kimlik = kimlik;
     kimlik();
     clearInterval(odaZaman);
-    odaZaman=setInterval(()=>{ if(ODA.seat>=0){ clearInterval(odaZaman); return; } kimlik(); }, 1500);
+    odaZaman=setInterval(()=>{ if(ODA.seat>=0){ clearInterval(odaZaman); return; } kimlik(); }, 800);
     document.getElementById("katilHata").textContent="";
     bekleAc(); menuGuncelle();
   }catch(e){ hata.textContent="baglanti kurulamadi: "+e.message; ODA.rol=null; } }
