@@ -181,6 +181,7 @@
       <button class="mb ik" id="mKurallar">OYUN KURALLARI</button>
       <button class="mb ik" id="mCik" style="display:none;background:#7a3b3b;color:#ffd8d2">ODADAN ÇIK</button>
       <button class="mb ik" id="mTemizle" style="background:#5a2f33;color:#f0c0c0">TEMİZLE</button>
+      <div id="surumSatir" style="color:#6a7080;font-size:11px;text-align:center;margin-top:10px;font-family:Consolas"></div>
     </div>
   </div>
 
@@ -271,6 +272,31 @@
     <div class="odaKod" id="odaKodum">—</div>
     <div class="odaNot">davetler bu kodla yapılır · sıfırlanmaz</div>
   </div>
+  <div class="odaKart" id="sosyalKart">
+    <div class="odaBas">ARKADAŞLAR</div>
+    <div id="girisKutu">
+      <div class="odaEt">Google ile giriş yap — takma adın arkadaşların görünür</div>
+      <div id="gsiBtn"></div>
+      <div class="odaHata" id="girisHata"></div>
+    </div>
+    <div id="nickKutu" style="display:none">
+      <div class="odaEt">Takma adın (bir kez seçilir, kimse alamaz):</div>
+      <input id="nickGiris" placeholder="orn. kazim" autocomplete="off">
+      <button class="odaBtn yesil" id="nickOnay" style="padding:9px">TAKMA ADI ONAYLA</button>
+      <div class="odaHata" id="nickHata"></div>
+    </div>
+    <div id="arkadasKutu" style="display:none">
+      <div class="odaEt">Sen: <b id="benNick">—</b>
+        <span class="dnokta" style="display:inline-block;background:#7ee08a;vertical-align:middle"></span>
+        <a href="#" id="cikisBtn" style="color:#ff8a7a;font-size:12px;float:right">cikis</a></div>
+      <div id="arkadasListe"></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <input id="arkadasEkle" placeholder="takma ad" style="flex:1" autocomplete="off">
+        <button class="odaBtn sari" id="arkadasBtn" style="width:auto;padding:9px 12px;margin:0">EKLE</button>
+      </div>
+      <div class="odaHata" id="arkadasHata"></div>
+    </div>
+  </div>
   <div class="odaKart" id="kurKart">
     <div class="odaBas">ODA KUR</div>
     <div class="odaEt">Davet edileceklerin kodları:</div>
@@ -303,6 +329,14 @@
     <div class="odaNot" id="teshisH" style="color:#6eb4ff;font-family:Consolas"></div>
   </div>
   <button class="odaBtn gri" id="odaGeri">GERİ</button>
+</div>
+<div id="davetKap" style="position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:140;display:none;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#20252f;border:2px solid #7ee08a;border-radius:12px;padding:18px;max-width:340px;width:100%;text-align:center">
+    <div class="odaBas" id="davetBas">Oda Daveti</div>
+    <div class="odaEt" id="davetMetin"></div>
+    <button class="odaBtn yesil" id="davetKabul">KABUL ET ve ODAYA KATIL</button>
+    <button class="odaBtn gri" id="davetRed">REDDET</button>
+  </div>
 </div>
 <div id="odaBekle">
   <h3 id="bekleBas">Odaya katıldın — ev sahibi başlatması bekleniyor</h3>
@@ -1271,7 +1305,7 @@ function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catc
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
 const BEN_KOD = kodNorm(URLP.get("kod")||"") || kendiKodu();
-const SURUM = "v2026-11-20b";
+const SURUM = "v2026-11-20c";
 ODA.nGonder=0; ODA.nAlinan=0;
 let room=null, A_GONDER=null, TR=null, odaZaman=null;
 function odaYaz(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; }
@@ -1592,6 +1626,151 @@ if(URLP.get("oda")){
       if(o1){ o1.value = p[0]+"-"+p[1];
         const ad=URLP.get("ad"); if(ad && o2) o2.value = ad;
         odayaKatil(); } }, 700); } }
+</script>
+
+<script>
+// ===== SOSYAL: Google giriş + takma ad + arkadaş + yeşil nokta + davet =====
+const KV = "borsaoyunu7xk2";
+const GIS_ID = "911017529513-p3913d6kk5vsuj89nkghnoegvlv8fnuv.apps.googleusercontent.com";
+let BEN_SOC = null, gsiKuruldu = false, sonDavet = 0;
+function kvSlug(yol){ return (KV+"-"+yol.replace(/[^a-zA-Z0-9_-]/g,"-")).toLowerCase(); }
+async function kvGet(yol){
+  for(let deneme=0; deneme<2; deneme++){
+    try{
+      const r = await fetch("https://ntfy.sh/"+kvSlug(yol)+"/json?poll=1");
+      if(r.ok){
+        const txt = await r.text();
+        if(txt){
+          const satirlar = txt.trim().split("\n").filter(Boolean);
+          for(let i=satirlar.length-1; i>=0; i--){ try{
+            const o = JSON.parse(satirlar[i]);
+            if(o.event==="message" && o.message!=null) return JSON.parse(o.message);
+          }catch(e){} }
+        }
+      }
+    }catch(e){ console.warn("kvGet", e); }
+    await new Promise(w=>setTimeout(w, 900));   // ntfy önbelleği1sn gecikebilir
+  }
+  return null; }
+async function kvPut(yol, veri){ try{
+  const r = await fetch("https://ntfy.sh/"+kvSlug(yol), { method:"POST", body:JSON.stringify(veri) });
+  return r.ok; } catch(e){ console.warn("kvPut", e); return false; } }
+function sosyalYaz(id, t){ const e = document.getElementById(id); if(e) e.textContent = t; }
+function jwtCoz(jwt){ try{ const p = jwt.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+  return JSON.parse(atob(p)); }catch(e){ return null; } }
+function sosyalAc(){
+  const g = document.getElementById("girisKutu"), n = document.getElementById("nickKutu"),
+        a = document.getElementById("arkadasKutu");
+  if(!g) return;
+  if(BEN_SOC){ g.style.display="none"; n.style.display="none"; a.style.display="block";
+    document.getElementById("benNick").textContent = BEN_SOC.nick; arkadasCiz(); }
+  else { g.style.display="block"; n.style.display="none"; a.style.display="none"; gsiKur(); } }
+function gsiKur(){
+  if(gsiKuruldu || !window.google || !google.accounts) return;
+  gsiKuruldu = true;
+  google.accounts.id.initialize({ client_id:GIS_ID, callback:(resp)=>{
+    const bilgi = jwtCoz(resp.credential);
+    if(!bilgi || !bilgi.sub){ sosyalYaz("girisHata","Google yanıtı okunamadı"); return; }
+    window.__google = { sub: bilgi.sub, email: bilgi.email||"", ad: bilgi.name||"" };
+    const kayit = localStorage.getItem("borsaNick");
+    if(kayit){ try{ const k = JSON.parse(kayit);
+      if(k.sub === bilgi.sub){ BEN_SOC = k; heartKur(); sosyalAc(); return; } }catch(e){} }
+    document.getElementById("girisKutu").style.display = "none";
+    document.getElementById("nickKutu").style.display = "block";
+    sosyalYaz("nickHata", "Google girişi tamam — takma adını seç"); } });
+  const kutu = document.getElementById("gsiBtn"); if(kutu) kutu.innerHTML = "";
+  google.accounts.id.renderButton(kutu, { theme:"outline", size:"medium",
+    text:"continue_with", shape:"rectangular", width:230 }); }
+document.getElementById("nickOnay").onclick = async ()=>{
+  const nick = (document.getElementById("nickGiris").value||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
+  const h = document.getElementById("nickHata");
+  if(nick.length < 3){ h.textContent = "en az3 karakter (harf/rakam)"; return; }
+  if(!window.__google){ h.textContent = "Google girişi bulunamadı, yenile"; return; }
+  h.textContent = "kontrol…";
+  const mevcut = await kvGet("nick/"+nick);
+  if(mevcut && mevcut.sub !== window.__google.sub){ h.textContent = "bu takma ad alınmış"; return; }
+  const prof = { nick:nick, sub:window.__google.sub, email:window.__google.email,
+    arkadas: (mevcut && mevcut.arkadas) || [], tarih: Date.now() };
+  if(!await kvPut("nick/"+nick, prof)){ h.textContent = "kayıt yapılamadı (internet)"; return; }
+  BEN_SOC = prof; localStorage.setItem("borsaNick", JSON.stringify(prof));
+  heartKur(); sosyalAc(); };
+document.getElementById("cikisBtn").onclick = (e)=>{ e.preventDefault();
+  BEN_SOC = null; localStorage.removeItem("borsaNick"); sosyalAc(); };
+document.getElementById("arkadasBtn").onclick = async ()=>{
+  const ad = (document.getElementById("arkadasEkle").value||"").trim().toLowerCase();
+  const h = document.getElementById("arkadasHata");
+  if(!BEN_SOC){ h.textContent = "önce giriş yap"; return; }
+  if(ad === BEN_SOC.nick){ h.textContent = "kendini ekleyemezsin"; return; }
+  const karsi = await kvGet("nick/"+ad);
+  if(!karsi){ h.textContent = "bu takma ad yok"; return; }
+  if(BEN_SOC.arkadas.includes(ad)){ h.textContent = "zaten arkadaş"; return; }
+  BEN_SOC.arkadas.push(ad);
+  await kvPut("nick/"+BEN_SOC.nick, BEN_SOC);
+  localStorage.setItem("borsaNick", JSON.stringify(BEN_SOC));
+  document.getElementById("arkadasEkle").value = ""; h.textContent = "eklendi"; arkadasCiz(); };
+window.arkadasSil = async function(ad){
+  if(!BEN_SOC) return;
+  BEN_SOC.arkadas = BEN_SOC.arkadas.filter(x => x !== ad);
+  await kvPut("nick/"+BEN_SOC.nick, BEN_SOC);
+  localStorage.setItem("borsaNick", JSON.stringify(BEN_SOC));
+  arkadasCiz(); };
+async function arkadasCiz(){
+  const l = document.getElementById("arkadasListe");
+  if(!l || !BEN_SOC) return;
+  if(!BEN_SOC.arkadas.length){ l.innerHTML = '<div class="odaNot">henüz arkadaş yok — takma adıyla ekle</div>'; return; }
+  const simdi = Date.now(); let html = "";
+  for(const ad of BEN_SOC.arkadas){
+    const on = await kvGet("presence/"+ad);
+    const ye = on && (simdi - on.ts) < 55000;
+    html += `<div class="dsat"><span class="dnokta" style="background:${ye?"#7ee08a":"#5a5e68"}"></span><b>${ad}</b>`+
+      `<span style="margin-left:auto;font-size:12px;color:${ye?"#7ee08a":"#9698a0"}">${ye?"çevrimiçi":"kapalı"}</span>`+
+      (ye ? `<button class="odaBtn sari" style="width:auto;padding:4px 10px;margin:0;font-size:13px" onclick="davetGonder('${ad}')">DAVET</button>` : "")+
+      `<button style="background:none;border:none;color:#ff8a7a;font-size:15px" onclick="arkadasSil('${ad}')">&times;</button></div>`; }
+  l.innerHTML = html; }
+window.davetGonder = async function(ad){
+  if(!ODA.odaKodStr){ mesaj("önce oda kur"); return; }
+  const ok = await kvPut("davet/"+ad, { kimden:BEN_SOC.nick, oda:ODA.odaKodStr, tarih:Date.now() });
+  mesaj(ok ? ("davet gönderildi → "+ad) : "davet gönderilemedi"); };
+async function davetKontrol(){
+  if(!BEN_SOC) return;
+  const d = await kvGet("davet/"+BEN_SOC.nick);
+  if(d && d.tarih > sonDavet){
+    sonDavet = d.tarih; window.__davet = d;
+    document.getElementById("davetMetin").innerHTML =
+      `<b>${d.kimden}</b> seni odasına davet ediyor:<br><code style="color:#7ee08a">${d.oda}</code>`;
+    document.getElementById("davetKap").style.display = "flex"; } }
+document.getElementById("davetKabul").onclick = async ()=>{
+  const d = window.__davet;
+  document.getElementById("davetKap").style.display = "none";
+  if(!d || !BEN_SOC) return;
+  await kvPut("davet/"+BEN_SOC.nick, null);
+  if(ODA.rol){ mesaj("önce mevcut odadan çık (ODADAN ÇIK)"); return; }
+  document.getElementById("katilOda").value = d.oda;
+  document.getElementById("katilAd").value = BEN_SOC.nick;
+  odayaKatil(); };
+document.getElementById("davetRed").onclick = async ()=>{
+  document.getElementById("davetKap").style.display = "none";
+  if(BEN_SOC) await kvPut("davet/"+BEN_SOC.nick, null); };
+function heartKur(){
+  if(!BEN_SOC) return;
+  const at = async ()=>{ await kvPut("presence/"+BEN_SOC.nick, { ts:Date.now() }); };
+  at();
+  clearInterval(window.__heart); window.__heart = setInterval(at, 20000);
+  clearInterval(window.__sosyalT); window.__sosyalT = setInterval(()=>{
+    davetKontrol();
+    const a = document.getElementById("arkadasKutu");
+    if(a && a.style.display === "block") arkadasCiz(); }, 12000); }
+setTimeout(()=>{
+  const sat = document.getElementById("surumSatir"); if(sat) sat.textContent = SURUM;
+  const k = localStorage.getItem("borsaNick");
+  if(k){ try{ BEN_SOC = JSON.parse(k); heartKur(); }catch(e){ BEN_SOC = null; } }
+  sosyalAc();
+  if(!window.google){
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
+    s.onload = ()=>gsiKur(); document.head.appendChild(s);
+  } else gsiKur();
+  setInterval(davetKontrol, 10000); }, 600);
 </script>
 </body>
 </html>
