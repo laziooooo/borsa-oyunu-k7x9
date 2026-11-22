@@ -1306,7 +1306,7 @@ function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catc
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
 const BEN_KOD = kodNorm(URLP.get("kod")||"") || kendiKodu();
-const SURUM = "v2026-11-21a";
+const SURUM = "v2026-11-21b";
 ODA.nGonder=0; ODA.nAlinan=0;
 let room=null, A_GONDER=null, TR=null, odaZaman=null;
 function odaYaz(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; }
@@ -1644,10 +1644,15 @@ let BEN_SOC = null, gsiKuruldu = false;
 let sonDavet = (function(){ try{ return parseInt(localStorage.getItem("borsaSonDavet")||"0",10)||0; }catch(e){ return 0; } })();
 function davetIsle(t){ if(t>sonDavet){ sonDavet=t; try{ localStorage.setItem("borsaSonDavet", String(t)); }catch(e){} } }
 function kvSlug(yol){ return (KV+"-"+yol.replace(/[^a-zA-Z0-9_-]/g,"-")).toLowerCase(); }
+async function ntfyIstek(url, opts, sn){            // her isteğe sert zaman aşımı — askıda kalmasın
+  const c = new AbortController();
+  const t = setTimeout(()=>c.abort(), (sn||6)*1000);
+  try{ return await fetch(url, Object.assign({signal:c.signal}, opts||{})); }
+  finally{ clearTimeout(t); } }
 async function kvGet(yol){
   for(let deneme=0; deneme<2; deneme++){
     try{
-      const r = await fetch("https://ntfy.sh/"+kvSlug(yol)+"/json?poll=1&t="+Date.now());
+      const r = await ntfyIstek("https://ntfy.sh/"+kvSlug(yol)+"/json?poll=1&t="+Date.now(), null, 6);
       if(r.ok){
         const txt = await r.text();
         if(txt){
@@ -1666,7 +1671,7 @@ async function kvGet(yol){
   }
   return null; }
 async function kvPut(yol, veri){ try{
-  const r = await fetch("https://ntfy.sh/"+kvSlug(yol), { method:"POST", body:JSON.stringify(veri) });
+  const r = await ntfyIstek("https://ntfy.sh/"+kvSlug(yol), { method:"POST", body:JSON.stringify(veri) }, 6);
   if(r.ok){ ODA.kvOk = (ODA.kvOk||0)+1; } else { ODA.kvHata = (ODA.kvHata||0)+1; }
   return r.ok; } catch(e){ ODA.kvHata = (ODA.kvHata||0)+1; console.warn("kvPut", e); return false; } }
 function sosyalYaz(id, t){ const e = document.getElementById(id); if(e) e.textContent = t; }
