@@ -1306,7 +1306,7 @@ function kendiKodu(){ let k=null; try{ k=localStorage.getItem("borsaKod"); }catc
   if(!k || !kodGecerli(k)){ k=kodNorm(rastKod(8)); try{ localStorage.setItem("borsaKod",k); }catch(e){} }
   return k; }
 const BEN_KOD = kodNorm(URLP.get("kod")||"") || kendiKodu();
-const SURUM = "v2026-11-21b";
+const SURUM = "v2026-11-21c";
 ODA.nGonder=0; ODA.nAlinan=0;
 let room=null, A_GONDER=null, TR=null, odaZaman=null;
 function odaYaz(id,t){ const e=document.getElementById(id); if(e) e.textContent=t; }
@@ -1805,7 +1805,7 @@ setTimeout(()=>{
   const k = localStorage.getItem("borsaNick");
   if(k){ try{ BEN_SOC = JSON.parse(k); heartKur();
     kvPut("nick/"+BEN_SOC.nick, BEN_SOC);                    // kaydı hemen tazele
-    setInterval(()=>{ if(BEN_SOC) kvPut("nick/"+BEN_SOC.nick, BEN_SOC); }, 600000);
+    setInterval(()=>{ if(BEN_SOC) kvPut("nick/"+BEN_SOC.nick, BEN_SOC); }, 60000);  //60sn'de bir canlı tut
   }catch(e){ BEN_SOC = null; } }
   sosyalAc();
   if(!window.google){
